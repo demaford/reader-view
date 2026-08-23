@@ -77,24 +77,6 @@ const add = (src, o) => new Promise((resolve, reject) => {
   document.body.appendChild(s);
 });
 
-// hash
-const hash = link => {
-  const hash = link.hash.substring(1);
-
-  const a = iframe.contentDocument.querySelector(`[name="${hash}"],#${hash}`);
-  if (a) {
-    a.scrollIntoView({
-      block: 'start',
-      inline: 'nearest'
-    });
-    a.focus();
-  }
-  else {
-    console.warn('hash', link.hash, 'is unreachable');
-  }
-};
-window.hash = hash;
-
 // scrollbar
 const scrollbar = {
   has() {
@@ -424,8 +406,8 @@ shortcuts.render = (spans = shortcuts.keys()) => {
 
     const dom = iframe.contentDocument.documentElement.cloneNode(true);
 
-    // remove script tags
-    for (const s of [...dom.querySelectorAll('script')]) {
+    // remove script and base tags
+    for (const s of [...dom.querySelectorAll('script, base')]) {
       s.remove();
     }
 
@@ -1163,12 +1145,14 @@ const render = async () => {
     window.addEventListener('keydown', callback);
     iframe.contentWindow.focus();
   }
-  // move to hash
+  // move to hash after loading
   const url = args.get('url');
-  const indexOfHash = url.indexOf('#');
-  if (indexOfHash !== -1 && indexOfHash !== url.length - 1) {
-    const link = new URL(url);
-    hash(link);
+  if (url.includes('#')) {
+    try {
+      const link = new URL(url);
+      iframe.contentWindow.location.hash = link.hash;
+    }
+    catch (e) {}
   }
 };
 
