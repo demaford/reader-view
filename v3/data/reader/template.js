@@ -50,11 +50,7 @@ document.addEventListener('click', e => {
 
   const reader = config.prefs['reader-mode'];
   // Let browser handle external links
-  if (!reader) {
-    const link = e.target;
-    if (link.target !== '_blank') {
-      link.target = '_top'; // prevent the external link to open inside iframe
-    }
+  if (reader === false) {
     return;
   }
 
@@ -66,7 +62,7 @@ document.addEventListener('click', e => {
     cmd: 'open',
     url: a.href,
     reader: config.prefs['reader-mode'],
-    current: !e.ctrlKey && !e.metaKey
+    current: !e.ctrlKey && !e.metaKey && a.target !== '_blank'
   });
 });
 
