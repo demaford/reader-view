@@ -789,76 +789,7 @@ ready.cache = [];
 
 
 const render = async () => {
-  const obj = await chrome.runtime.sendMessage({
-    cmd: 'read-data',
-    id: Number(args.get('id')) // Safari rename ids after reload
-  });
-
-  if (obj === false) {
-    document.getElementById('content').dataset.msg = chrome.i18n.getMessage('rd_warning_1') + '\n\n' + args.get('url');
-
-    setTimeout(() => {
-      document.querySelector('[data-cmd=close]').click();
-    }, 3000);
-
-    return;
-  }
-  // set referer
-  await remote().catch(e => console.error('cannot set referer', e));
-
-  article = obj;
-  document.body.dataset.lang = article.lang;
-
-  const currentDate = new Date();
-  document.title = document.oTitle = config.prefs.title
-    .replace('[ORIGINAL]', (article.title || args.get('url')).replace(' :: Reader View', ''))
-    .replace('[BRAND]', 'Reader View')
-    .replace('[DD]', String(currentDate.getDate()).padStart(2, '0'))
-    .replace('[MM]', String(currentDate.getMonth() + 1).padStart(2, '0'))
-    .replace('[YYYY]', currentDate.getFullYear());
-
-  if (!article) { // open this page from history for instance
-    return location.replace(args.get('url'));
-  }
-
   const gcs = window.getComputedStyle(document.documentElement);
-
-  const {textVide} = await import('./libs/text-vide/index.mjs');
-  // http://add0n.com/chrome-reader-view.html#IDComment1118667428
-
-  let content = article.content;
-
-  // each article has two elements
-  // example with multiple articles that should not be used
-  // https://www.ctvnews.ca/health/are-you-in-perimenopause-here-s-what-to-look-for-according-to-a-doctor-1.7094650
-  // example with multiple articles that should be used
-  // chatgpt with multiple Q&A
-  if (article.contents && article.contents.length > 2) {
-    if (article.contents.some(c => c.length >= article.content.length)) {
-      const extract = args.has('extract-articles') ?
-        args.get('extract-articles') === 'true' : config.prefs['./plugins/multiple-articles/core.mjs'];
-      if (extract) {
-        content = article.contents.join('');
-        document.body.dataset['articles'] = true;
-      }
-      else {
-        document.body.dataset['articles'] = false;
-      }
-    }
-  }
-
-  if (config.prefs['fixation-point']) {
-    content = textVide(article.content.replace(/&nbsp;/g, ' '), {
-      fixationPoint: config.prefs['fixation-point']
-    });
-  }
-
-  if (article.dir) {
-    iframe.contentDocument.documentElement.setAttribute('dir', article.dir);
-  }
-  if (article.lang) {
-    iframe.contentDocument.documentElement.setAttribute('lang', article.lang);
-  }
   iframe.contentDocument.getElementById('ftp').textContent = `html[data-mode="light"] {
     color-scheme: light;
     --fg: ${gcs.getPropertyValue('--color-mode-light-color')};
@@ -907,6 +838,81 @@ const render = async () => {
     --bd: ${gcs.getPropertyValue('--color-mode-nord-dark-color')};
     --bg: ${gcs.getPropertyValue('--color-mode-nord-dark-bg')};
   }`;
+  iframe.contentDocument.documentElement.dataset.mode = document.body.dataset.mode;
+
+  const obj = await chrome.runtime.sendMessage({
+    cmd: 'read-data',
+    id: Number(args.get('id')) // Safari changes ids after reload
+  });
+
+  if (obj === false) {
+    document.getElementById('content').dataset.msg = chrome.i18n.getMessage('rd_warning_2') + '\n\n' + args.get('url');
+
+    // Do not use Close. The page may have been opened from bookmarks,
+    // and closing it could unintentionally close the browser tab.
+    setTimeout(() => chrome.runtime.sendMessage({
+      cmd: 'open',
+      url: args.get('url'),
+      reader: true,
+      current: true
+    }), 750);
+
+    return;
+  }
+  // set referer
+  await remote().catch(e => console.error('cannot set referer', e));
+
+  article = obj;
+  document.body.dataset.lang = article.lang;
+
+  const currentDate = new Date();
+  document.title = document.oTitle = config.prefs.title
+    .replace('[ORIGINAL]', (article.title || args.get('url')).replace(' :: Reader View', ''))
+    .replace('[BRAND]', 'Reader View')
+    .replace('[DD]', String(currentDate.getDate()).padStart(2, '0'))
+    .replace('[MM]', String(currentDate.getMonth() + 1).padStart(2, '0'))
+    .replace('[YYYY]', currentDate.getFullYear());
+
+  if (!article) { // open this page from history for instance
+    return location.replace(args.get('url'));
+  }
+
+  const {textVide} = await import('./libs/text-vide/index.mjs');
+  // http://add0n.com/chrome-reader-view.html#IDComment1118667428
+
+  let content = article.content;
+
+  // each article has two elements
+  // example with multiple articles that should not be used
+  // https://www.ctvnews.ca/health/are-you-in-perimenopause-here-s-what-to-look-for-according-to-a-doctor-1.7094650
+  // example with multiple articles that should be used
+  // chatgpt with multiple Q&A
+  if (article.contents && article.contents.length > 2) {
+    if (article.contents.some(c => c.length >= article.content.length)) {
+      const extract = args.has('extract-articles') ?
+        args.get('extract-articles') === 'true' : config.prefs['./plugins/multiple-articles/core.mjs'];
+      if (extract) {
+        content = article.contents.join('');
+        document.body.dataset['articles'] = true;
+      }
+      else {
+        document.body.dataset['articles'] = false;
+      }
+    }
+  }
+
+  if (config.prefs['fixation-point']) {
+    content = textVide(article.content.replace(/&nbsp;/g, ' '), {
+      fixationPoint: config.prefs['fixation-point']
+    });
+  }
+
+  if (article.dir) {
+    iframe.contentDocument.documentElement.setAttribute('dir', article.dir);
+  }
+  if (article.lang) {
+    iframe.contentDocument.documentElement.setAttribute('lang', article.lang);
+  }
   iframe.contentDocument.getElementById('reader-title').textContent = article.title || 'Unknown Title';
   iframe.contentDocument.getElementById('reader-content').outerHTML = content;
   iframe.contentDocument.getElementById('reader-credits').textContent = article.byline || '';
@@ -923,7 +929,6 @@ const render = async () => {
   iframe.contentDocument.body.dataset.images = config.prefs['show-images'];
   iframe.contentDocument.body.dataset.font = document.body.dataset.font;
   iframe.contentDocument.body.dataset.columns = config.prefs['column-count'];
-  iframe.contentDocument.documentElement.dataset.mode = document.body.dataset.mode;
   iframe.contentDocument.documentElement.dataset.pageUrl = args.get('url');
 
   if (document.body.dataset.loaded !== 'true') {

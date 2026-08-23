@@ -41,6 +41,9 @@
   "rd_warning_1": {
     "message": "Reader's content is not available anymore. Switching back to the original page in a few seconds..."
   },
+  "rd_warning_2": {
+    "message": "Reader's content is not available anymore. Converting from the original page to reader view in a few seconds..."
+  },
   "rd_copied": {
     "message": "Copied to the clipboard"
   },

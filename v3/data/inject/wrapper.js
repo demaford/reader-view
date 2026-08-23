@@ -287,6 +287,7 @@ try {
       docs.sort((a, b) => {
         return b.documentElement.innerText.length - a.documentElement.innerText.length;
       });
+
       let article;
       let doc;
       // Select the first lengthy document that returns reader content
